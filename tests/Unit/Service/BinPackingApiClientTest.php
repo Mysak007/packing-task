@@ -4,51 +4,37 @@ namespace Tests\Unit\Service;
 
 use App\DTO\ProductInput;
 use App\Entity\Packaging;
-use App\Exception\ApiUnavailableException;
+use App\Service\BinPackingApi;
 use App\Service\BinPackingApiClient;
-use GuzzleHttp\Client;
-use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Psr7\Response;
+use App\Service\BinPackingRequestMapper;
+use App\Service\BinPackingResponseSelector;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 
 class BinPackingApiClientTest extends TestCase
 {
-    public function testSelectsSmallestContainerThatFitsAllItems(): void
+    public function testDelegatesToApiAndSelectsSmallestBox(): void
     {
-        $mock = new MockHandler([
-            new Response(200, [], json_encode([
+        $products = [new ProductInput(1, 1, 1, 1)];
+        $boxes = [$this->packaging(1, 2, 2, 2, 10)];
+
+        $binPackingApi = $this->createMock(BinPackingApi::class);
+        $binPackingApi->expects(self::once())
+            ->method('pack')
+            ->willReturn([
                 'packedContainers' => [
-                    ['containerId' => 'box-2', 'items' => [['itemId' => 'item-0']]],
                     ['containerId' => 'box-1', 'items' => [['itemId' => 'item-0']]],
                 ],
-                'unpackedItems' => [],
-            ], JSON_THROW_ON_ERROR)),
-        ]);
-        $client = new Client(['handler' => HandlerStack::create($mock)]);
-        $api = new BinPackingApiClient($client);
+            ]);
 
-        $products = [new ProductInput(1, 1, 1, 1)];
-        $boxes = [
-            $this->packaging(1, 2, 2, 2, 10),
-            $this->packaging(2, 3, 3, 3, 10),
-        ];
+        $client = new BinPackingApiClient(
+            $binPackingApi,
+            new BinPackingRequestMapper(),
+            new BinPackingResponseSelector()
+        );
+        $result = $client->findSmallestBox($products, $boxes);
 
-        $result = $api->findSmallestContainerId($products, $boxes);
         self::assertSame(1, $result);
-    }
-
-    public function testRateLimitTriggersUnavailableException(): void
-    {
-        $mock = new MockHandler([
-            new Response(429, [], '{"error":"rate_limit_exceeded"}'),
-        ]);
-        $client = new Client(['handler' => HandlerStack::create($mock)]);
-        $api = new BinPackingApiClient($client);
-
-        $this->expectException(ApiUnavailableException::class);
-        $api->findSmallestContainerId([new ProductInput(1, 1, 1, 1)], [$this->packaging(1, 2, 2, 2, 10)]);
     }
 
     private function packaging(int $id, float $w, float $h, float $l, float $maxWeight): Packaging

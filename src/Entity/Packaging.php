@@ -6,11 +6,13 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Represents a box available in the warehouse.
+ * Warehouse shipping box (carton) available for packing orders.
  *
- * Warehouse workers pack a set of products for a given order into one of these boxes.
+ * Named {@see Packaging} for compatibility with the project stub and DB table `packaging`.
+ * In domain language and the public API this is a "box", not a package/shipment.
  */
 #[ORM\Entity]
+#[ORM\Table(name: 'packaging')]
 class Packaging
 {
 

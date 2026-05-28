@@ -16,82 +16,76 @@ If the API is temporarily unavailable, it uses a local fallback heuristic.
 
 Products are rotation-friendly (dimensions can be permuted on any axis).
 
-## API Contract
+## Terminology
 
-### Input
+| Term in code / DB | Meaning |
+|---|---|
+| `Packaging` entity, `packaging` table | Warehouse **box** (stub naming) |
+| `box` in API response | Selected shipping box returned to the client |
+| `container` in `BinPackingApiClient` | External [Bin Packing API](https://binpacking.janedbal.cz/) naming only |
 
-`POST /pack` JSON body:
+## API
 
-```json
-{
-  "products": [
-    { "width": 3.4, "height": 2.1, "length": 3.0, "weight": 4.0 },
-    { "width": 4.9, "height": 1.0, "length": 2.4, "weight": 9.9 }
-  ]
-}
-```
+HTTP contract (request/response schemas, status codes, examples): **[openapi.json](./openapi.json)**
 
-### Success response
-
-- `200 OK`
-
-```json
-{
-  "box": {
-    "id": 4,
-    "width": 5.5,
-    "height": 6.0,
-    "length": 7.5,
-    "maxWeight": 30.0
-  }
-}
-```
-
-If no single box can fit all products:
-
-```json
-{
-  "box": null
-}
-```
-
-### Error responses
-
-- `400` malformed JSON
-- `422` validation failure (`products` missing/empty, non-numeric values, non-positive values)
-- `500` unexpected internal error
+You can preview it in Swagger Editor or any OpenAPI viewer.
 
 ## Design Decisions
 
 ### Units and integer conversion
 
-- Input accepts decimal numbers (`float`)
-- The 3rd-party API expects integers, so values are converted by `round(value * 1000)`
-- Service is unit-agnostic, but all values in one request must use consistent units
+The service is **unit-agnostic** (millimeters, centimeters, etc.), but **one consistent unit system must be used everywhere**:
+
+- product dimensions and weight in the request (`products[]`)
+- box dimensions and `maxWeight` in the database (`packaging` table, seed `data/packaging-data.sql`)
+
+If request products and configured boxes use different scales (e.g. products as `34 × 21 × 30` while boxes remain `5.5 × 6.0 × 7.5` from seed), results will be wrong — often `{"box": null}`. Removing a decimal point is **not** equivalent (`3.4` ≠ `34`) unless box data is scaled the same way.
+
+- Input accepts `int` or `float` (e.g. `3.4` or `34.0`)
+- The 3rd-party API expects positive integers; values are sent as `round(value * 1000)` with the **same factor** applied to products and boxes
+- Response `box` dimensions use the same unit system as stored in `packaging`
 
 ### Caching
 
 - Results are cached in DB table `packing_cache`
-- Cache key is SHA-256 of canonicalized input:
+- Cache key is built by `PackingCacheKeyGenerator` (SHA-256 of canonicalized input):
   - product dimensions normalized (sorted triplets) to be rotation-agnostic
   - product list sorted to be order-agnostic
   - current box definitions included, so box config changes invalidate cache naturally
+- `PackingService` works with cache only via `findForInput` / `saveForInput` (no hash logic)
 - No TTL is used; invalidation is data-driven via hash composition
 
 ### Fallback strategy
 
-Fallback is used for temporary API unavailability:
-- network/connectivity issues
-- timeouts
-- HTTP `429`
-- HTTP `5xx`
+Fallback is used only for recoverable external API failures:
+- network/connectivity issues (`BinPackingApiTransportException`)
+- HTTP `429` (`BinPackingApiRateLimitedException`)
+- HTTP `5xx` (`BinPackingApiServerException`)
+- invalid/malformed API response after successful HTTP status (`BinPackingApiResponseException`)
 
-Fallback is not used for request validation errors.
+Fallback is **not** used for:
+- request validation errors from this service (`400/422`)
+- external API client errors (`4xx`, except `429`) -> returns `502`
 
 Local fallback heuristic checks:
 - total weight <= box max weight
 - total product volume <= box volume
 - each individual product fits into the box with rotation allowed
+
+### Error handling and observability
+
+- Recoverable failures are handled in `PackingService` via `RecoverablePackingException`
+- Non-recoverable external API failures bubble to `Application` as `502`
+- Unexpected errors are logged via `ErrorLogger` (`error_log` JSON payload) and returned as `500`
+- All dependencies are constructed explicitly in `ApplicationFactory` (no hidden `new` defaults in constructors)
+
+### External API layering
+
+- `BinPackingApi` — interface for the HTTP provider (swappable implementation)
+- `JanedbalBinPackingApi` — calls [Bin Packing API](https://binpacking.janedbal.cz/) and returns decoded JSON
+- `BinPackingRequestMapper` — maps domain `products` / boxes to API request shape
+- `BinPackingResponseSelector` — picks smallest box from API response
+- `BinPackingApiClient` — orchestrates the above
 
 ## Local development
 

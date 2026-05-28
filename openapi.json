@@ -1,0 +1,281 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Bin Packing Microservice",
+    "version": "1.0.0",
+    "description": "Computes the smallest single warehouse box that can fit all input products.\n\nProducts may be rotated on any axis. Available boxes are loaded from backend configuration (database table `packaging`), not from the request.\n\n## Units (important)\n\nThe API is unit-agnostic, but **product dimensions/weight in the request and box dimensions/maxWeight in `packaging` must use the same unit system**. Example: if products are sent as `34 × 21 × 30`, boxes in the database must be defined in that same scale — not as `5.5 × 6.0 × 7.5` from the original seed unless you scale them consistently. `3.4` and `34` are not interchangeable.\n\nInput may use integers or floats. Values sent to the external API are positive integers via `round(value * 1000)` for both products and boxes.\n\n## External API mapping\n\nThis service is **not** a 1:1 proxy of the [Bin Packing API](https://binpacking.janedbal.cz/):\n\n| This service | External API |\n|---|---|\n| `products[]` | `items[]` |\n| DB `packaging` (boxes) | `containers[]` |\n| `width` | `width` |\n| `length` | `length` |\n| `height` | `depth` |\n| `weight` | `weight` |\n| `maxWeight` | `maxWeight` |\n\nPosition data (`x`, `y`, `z`, `packedContainers`, etc.) is not exposed."
+  },
+  "servers": [
+    {
+      "url": "http://localhost",
+      "description": "Local development (invoked via `php run.php`)"
+    }
+  ],
+  "paths": {
+    "/pack": {
+      "post": {
+        "operationId": "packProducts",
+        "summary": "Find smallest box for products",
+        "description": "Returns the smallest box (by volume) that can hold all products in a single container. If no box fits, returns `box: null`.\n\nProduct dimensions must use the same units as boxes configured in the `packaging` database table.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackRequest"
+              },
+              "examples": {
+                "sample": {
+                  "summary": "Two products",
+                  "value": {
+                    "products": [
+                      {
+                        "width": 3.4,
+                        "height": 2.1,
+                        "length": 3.0,
+                        "weight": 4.0
+                      },
+                      {
+                        "width": 4.9,
+                        "height": 1.0,
+                        "length": 2.4,
+                        "weight": 9.9
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Packing result. `box` is `null` when no single box can fit all products.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackResponse"
+                },
+                "examples": {
+                  "boxFound": {
+                    "summary": "Smallest fitting box",
+                    "value": {
+                      "box": {
+                        "id": 4,
+                        "width": 5.5,
+                        "height": 6.0,
+                        "length": 7.5,
+                        "maxWeight": 30.0
+                      }
+                    }
+                  },
+                  "noBox": {
+                    "summary": "No single box fits",
+                    "value": {
+                      "box": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed JSON body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "bad_request",
+                  "message": "Invalid JSON: Syntax error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                },
+                "example": {
+                  "error": "validation_failed",
+                  "message": "Input validation failed",
+                  "violations": [
+                    {
+                      "path": "/products/0/width",
+                      "message": "Expected positive number."
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "External packing API failed in a non-recoverable way",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "packing_service_unavailable",
+                  "message": "External packing service could not process the request."
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "internal_error",
+                  "message": "An unexpected error occurred."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PackRequest": {
+        "type": "object",
+        "description": "Products to pack. Dimensions and weight must use the same unit system as warehouse boxes in the `packaging` table.",
+        "required": ["products"],
+        "properties": {
+          "products": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            }
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "required": ["width", "height", "length", "weight"],
+        "properties": {
+          "width": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Product width. Must use the same unit system as `packaging` box dimensions in the database (and the same scale for all products in the request)."
+          },
+          "height": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Product height. Same units as `packaging` boxes. Mapped to `depth` on the external Bin Packing API."
+          },
+          "length": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Product length. Same units as `packaging` boxes."
+          },
+          "weight": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Product weight. Same unit system as `packaging.maxWeight`."
+          }
+        },
+        "additionalProperties": true
+      },
+      "PackResponse": {
+        "type": "object",
+        "required": ["box"],
+        "properties": {
+          "box": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Box"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "Box": {
+        "type": "object",
+        "description": "Selected warehouse box. Dimensions and maxWeight use the same unit system as the request products and the `packaging` table.",
+        "required": ["id", "width", "height", "length", "maxWeight"],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Internal packaging identifier."
+          },
+          "width": {
+            "type": "number",
+            "description": "Box width (same units as request product dimensions)."
+          },
+          "height": {
+            "type": "number",
+            "description": "Box height (same units as request product dimensions)."
+          },
+          "length": {
+            "type": "number",
+            "description": "Box length (same units as request product dimensions)."
+          },
+          "maxWeight": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Maximum total weight for the box (same unit system as product `weight`)."
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error", "message"],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ValidationErrorResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ErrorResponse"
+          },
+          {
+            "type": "object",
+            "required": ["violations"],
+            "properties": {
+              "violations": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Violation"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Violation": {
+        "type": "object",
+        "required": ["path", "message"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "JSON Pointer to the invalid field."
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

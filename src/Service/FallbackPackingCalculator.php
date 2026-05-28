@@ -11,7 +11,7 @@ class FallbackPackingCalculator
      * @param list<ProductInput> $products
      * @param list<Packaging> $boxes
      */
-    public function findSmallestContainerId(array $products, array $boxes): ?int
+    public function findSmallestBox(array $products, array $boxes): ?int
     {
         $totalWeight = array_sum(array_map(static fn (ProductInput $product): float => $product->getWeight(), $products));
         $totalVolume = array_sum(array_map(static fn (ProductInput $product): float => $product->getWidth() * $product->getHeight() * $product->getLength(), $products));

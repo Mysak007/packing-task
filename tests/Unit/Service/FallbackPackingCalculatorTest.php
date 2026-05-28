@@ -20,7 +20,7 @@ class FallbackPackingCalculatorTest extends TestCase
         $small = $this->packaging(1, 2.5, 2.5, 2.5, 10);
         $big = $this->packaging(2, 5, 5, 5, 10);
 
-        $result = $service->findSmallestContainerId($products, [$big, $small]);
+        $result = $service->findSmallestBox($products, [$big, $small]);
         self::assertSame(1, $result);
     }
 
@@ -30,7 +30,7 @@ class FallbackPackingCalculatorTest extends TestCase
         $products = [new ProductInput(1, 1, 1, 100)];
         $box = $this->packaging(1, 10, 10, 10, 20);
 
-        $result = $service->findSmallestContainerId($products, [$box]);
+        $result = $service->findSmallestBox($products, [$box]);
         self::assertNull($result);
     }
 

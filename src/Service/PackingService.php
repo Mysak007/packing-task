@@ -4,7 +4,7 @@ namespace App\Service;
 
 use App\DTO\ProductInput;
 use App\Entity\Packaging;
-use App\Exception\ApiUnavailableException;
+use App\Exception\RecoverablePackingException;
 use App\Repository\PackagingRepository;
 use App\Repository\PackingCacheRepository;
 
@@ -28,65 +28,29 @@ class PackingService
             return null;
         }
 
-        $hash = $this->buildInputHash($products, $boxes);
-
-        $cached = $this->cacheRepository->findByInputHash($hash);
+        $cached = $this->cacheRepository->findForInput($products, $boxes);
         if ($cached !== null) {
-            $packagingId = $cached->getPackagingId();
-            if ($packagingId === null) {
-                return null;
-            }
-
-            return $this->packagingRepository->findById($packagingId);
+            return $this->resolvePackaging($cached->getPackagingId());
         }
 
         try {
-            $packagingId = $this->apiClient->findSmallestContainerId($products, $boxes);
-            $this->cacheRepository->saveResult($hash, $packagingId);
+            $packagingId = $this->apiClient->findSmallestBox($products, $boxes);
+            $this->cacheRepository->saveForInput($products, $boxes, $packagingId);
 
-            if ($packagingId === null) {
-                return null;
-            }
-
-            return $this->packagingRepository->findById($packagingId);
-        } catch (ApiUnavailableException) {
-            $fallbackPackagingId = $this->fallbackCalculator->findSmallestContainerId($products, $boxes);
-            if ($fallbackPackagingId === null) {
-                return null;
-            }
-
-            return $this->packagingRepository->findById($fallbackPackagingId);
+            return $this->resolvePackaging($packagingId);
+        } catch (RecoverablePackingException) {
+            return $this->resolvePackaging(
+                $this->fallbackCalculator->findSmallestBox($products, $boxes)
+            );
         }
     }
 
-    /**
-     * @param list<ProductInput> $products
-     * @param list<Packaging> $boxes
-     */
-    private function buildInputHash(array $products, array $boxes): string
+    private function resolvePackaging(?int $packagingId): ?Packaging
     {
-        $normalizedProducts = array_map(function (ProductInput $product): array {
-            $dims = $product->getNormalizedDimensions();
+        if ($packagingId === null) {
+            return null;
+        }
 
-            return [$dims[0], $dims[1], $dims[2], $product->getWeight()];
-        }, $products);
-
-        usort($normalizedProducts, static fn (array $left, array $right): int => $left <=> $right);
-
-        $normalizedBoxes = array_map(function (Packaging $box): array {
-            $dims = [$box->getWidth(), $box->getHeight(), $box->getLength()];
-            sort($dims, SORT_NUMERIC);
-
-            return [$dims[0], $dims[1], $dims[2], $box->getMaxWeight()];
-        }, $boxes);
-
-        usort($normalizedBoxes, static fn (array $left, array $right): int => $left <=> $right);
-
-        $canonical = [
-            'products' => $normalizedProducts,
-            'boxes' => $normalizedBoxes,
-        ];
-
-        return hash('sha256', json_encode($canonical, JSON_THROW_ON_ERROR));
+        return $this->packagingRepository->findById($packagingId);
     }
 }

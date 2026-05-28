@@ -2,13 +2,36 @@
 
 namespace App\Repository;
 
+use App\DTO\ProductInput;
+use App\Entity\Packaging;
 use App\Entity\PackingCache;
+use App\Service\PackingCacheKeyGenerator;
 use Doctrine\ORM\EntityManager;
 
 class PackingCacheRepository
 {
-    public function __construct(private readonly EntityManager $entityManager)
+    public function __construct(
+        private readonly EntityManager $entityManager,
+        private readonly PackingCacheKeyGenerator $cacheKeyGenerator
+    ) {
+    }
+
+    /**
+     * @param list<ProductInput> $products
+     * @param list<Packaging> $boxes
+     */
+    public function findForInput(array $products, array $boxes): ?PackingCache
     {
+        return $this->findByInputHash($this->cacheKeyGenerator->generate($products, $boxes));
+    }
+
+    /**
+     * @param list<ProductInput> $products
+     * @param list<Packaging> $boxes
+     */
+    public function saveForInput(array $products, array $boxes, ?int $packagingId): void
+    {
+        $this->saveResult($this->cacheKeyGenerator->generate($products, $boxes), $packagingId);
     }
 
     public function findByInputHash(string $inputHash): ?PackingCache
