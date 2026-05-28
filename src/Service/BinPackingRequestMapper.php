@@ -12,7 +12,7 @@ use function round;
 final class BinPackingRequestMapper
 {
 
-    private const int SCALE = 1000;
+    private const int SCALE = 100;
 
     /**
      * @param list<ProductInput> $products

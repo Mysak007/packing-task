@@ -42,7 +42,7 @@ The service is **unit-agnostic** (millimeters, centimeters, etc.), but **one con
 If request products and configured boxes use different scales (e.g. products as `34 × 21 × 30` while boxes remain `5.5 × 6.0 × 7.5` from seed), results will be wrong — often `{"box": null}`. Removing a decimal point is **not** equivalent (`3.4` ≠ `34`) unless box data is scaled the same way.
 
 - Input accepts `int` or `float` (e.g. `3.4` or `34.0`)
-- The 3rd-party API expects positive integers; values are sent as `round(value * 1000)` with the **same factor** applied to products and boxes
+- The 3rd-party API expects positive integers; values are sent as `round(value * 100)` with the **same factor** applied to products and boxes
 - Response `box` dimensions use the same unit system as stored in `packaging`
 
 ### Caching
