@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App\Service;
 
@@ -12,22 +12,29 @@ use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use JsonException;
+use Psr\Http\Message\ResponseInterface;
+use function is_array;
+use function json_decode;
+use const JSON_THROW_ON_ERROR;
 
-final class JanedbalBinPackingApi implements BinPackingApi
+final readonly class JanedbalBinPackingApi implements BinPackingApi
 {
-    private const ENDPOINT = 'https://binpacking.janedbal.cz/api/v1/pack';
 
-    public function __construct(private readonly ClientInterface $httpClient)
+    private const string ENDPOINT = 'https://binpacking.janedbal.cz/api/v1/pack';
+
+    public function __construct(private ClientInterface $httpClient)
     {
     }
 
     /**
      * @param list<array<string, mixed>> $containers
      * @param list<array<string, mixed>> $items
-     *
      * @return array<string, mixed>
      */
-    public function pack(array $containers, array $items): array
+    public function pack(
+        array $containers,
+        array $items,
+    ): array
     {
         try {
             $response = $this->httpClient->request('POST', self::ENDPOINT, [
@@ -40,7 +47,7 @@ final class JanedbalBinPackingApi implements BinPackingApi
             throw new BinPackingApiTransportException('Packing API connection failed.', $exception);
         } catch (RequestException $exception) {
             $errorResponse = $exception->getResponse();
-            if ($errorResponse !== null) {
+            if ($errorResponse instanceof ResponseInterface) {
                 $this->throwForHttpStatus($errorResponse->getStatusCode());
             }
 
@@ -85,6 +92,8 @@ final class JanedbalBinPackingApi implements BinPackingApi
             throw new BinPackingApiResponseException('Packing API returned invalid payload.');
         }
 
+        /** @var array<string, mixed> $decoded */
         return $decoded;
     }
+
 }

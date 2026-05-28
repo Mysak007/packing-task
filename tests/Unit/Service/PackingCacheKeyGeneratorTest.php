@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Tests\Unit\Service;
 
@@ -10,6 +10,7 @@ use ReflectionProperty;
 
 class PackingCacheKeyGeneratorTest extends TestCase
 {
+
     public function testSameProductsInDifferentOrderProduceSameHash(): void
     {
         $generator = new PackingCacheKeyGenerator();
@@ -17,11 +18,11 @@ class PackingCacheKeyGeneratorTest extends TestCase
 
         $hashA = $generator->generate(
             [new ProductInput(1, 2, 3, 1), new ProductInput(4, 5, 6, 2)],
-            $boxes
+            $boxes,
         );
         $hashB = $generator->generate(
             [new ProductInput(4, 5, 6, 2), new ProductInput(1, 2, 3, 1)],
-            $boxes
+            $boxes,
         );
 
         self::assertSame($hashA, $hashB);
@@ -38,7 +39,13 @@ class PackingCacheKeyGeneratorTest extends TestCase
         self::assertSame($hashA, $hashB);
     }
 
-    private function packaging(int $id, float $w, float $h, float $l, float $maxWeight): Packaging
+    private function packaging(
+        int $id,
+        float $w,
+        float $h,
+        float $l,
+        float $maxWeight,
+    ): Packaging
     {
         $packaging = new Packaging($w, $h, $l, $maxWeight);
         $idProperty = new ReflectionProperty(Packaging::class, 'id');
@@ -46,4 +53,5 @@ class PackingCacheKeyGeneratorTest extends TestCase
 
         return $packaging;
     }
+
 }

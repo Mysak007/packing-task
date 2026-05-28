@@ -16,7 +16,38 @@
             "App\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
     "require-dev": {
-        "phpunit/phpunit": "^13.1"
+        "phpunit/phpunit": "^13.1",
+        "phpstan/phpstan": "^2.2",
+        "rector/rector": "^2.4",
+        "shipmonk/phpstan-rules": "^4.4",
+        "shipmonk/dead-code-detector": "^1.1",
+        "shipmonk/coding-standard": "^0.2.4",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpstan/phpstan-doctrine": "^2.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "phpstan": "phpstan analyse -c phpstan.neon.dist --memory-limit=512M",
+        "phpcs": "phpcs",
+        "phpcbf": "phpcbf",
+        "rector": "rector process",
+        "rector:dry-run": "rector process --dry-run",
+        "check": [
+            "@phpstan",
+            "@phpcs",
+            "@test"
+        ],
+        "fix:cs": "phpcbf"
     }
 }

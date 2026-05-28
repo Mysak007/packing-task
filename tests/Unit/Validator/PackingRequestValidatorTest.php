@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Tests\Unit\Validator;
 
@@ -7,9 +7,13 @@ use App\Exception\ValidationException;
 use App\Validator\PackingRequestValidator;
 use GuzzleHttp\Psr7\Request;
 use PHPUnit\Framework\TestCase;
+use function json_encode;
+use function reset;
+use const JSON_THROW_ON_ERROR;
 
 class PackingRequestValidatorTest extends TestCase
 {
+
     public function testValidPayloadIsParsed(): void
     {
         $validator = new PackingRequestValidator();
@@ -22,7 +26,9 @@ class PackingRequestValidatorTest extends TestCase
         $products = $validator->validate($request);
 
         self::assertCount(1, $products);
-        self::assertSame(1.2, $products[0]->getWidth());
+        $firstProduct = reset($products);
+        self::assertNotFalse($firstProduct);
+        self::assertSame(1.2, $firstProduct->getWidth());
     }
 
     public function testInvalidJsonThrowsBadRequest(): void
@@ -47,8 +53,12 @@ class PackingRequestValidatorTest extends TestCase
             $validator->validate($request);
             self::fail('ValidationException was expected.');
         } catch (ValidationException $exception) {
-            self::assertNotEmpty($exception->getViolations());
-            self::assertSame('/products/0/width', $exception->getViolations()[0]['path']);
+            $violations = $exception->getViolations();
+            self::assertNotEmpty($violations);
+            $firstViolation = reset($violations);
+            self::assertNotFalse($firstViolation);
+            self::assertSame('/products/0/width', $firstViolation['path']);
         }
     }
+
 }

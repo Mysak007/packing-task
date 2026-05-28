@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Tests\Unit\Service;
 
@@ -13,6 +13,7 @@ use ReflectionProperty;
 
 class BinPackingApiClientTest extends TestCase
 {
+
     public function testDelegatesToApiAndSelectsSmallestBox(): void
     {
         $products = [new ProductInput(1, 1, 1, 1)];
@@ -30,14 +31,20 @@ class BinPackingApiClientTest extends TestCase
         $client = new BinPackingApiClient(
             $binPackingApi,
             new BinPackingRequestMapper(),
-            new BinPackingResponseSelector()
+            new BinPackingResponseSelector(),
         );
         $result = $client->findSmallestBox($products, $boxes);
 
         self::assertSame(1, $result);
     }
 
-    private function packaging(int $id, float $w, float $h, float $l, float $maxWeight): Packaging
+    private function packaging(
+        int $id,
+        float $w,
+        float $h,
+        float $l,
+        float $maxWeight,
+    ): Packaging
     {
         $packaging = new Packaging($w, $h, $l, $maxWeight);
         $idProperty = new ReflectionProperty(Packaging::class, 'id');
@@ -45,4 +52,5 @@ class BinPackingApiClientTest extends TestCase
 
         return $packaging;
     }
+
 }

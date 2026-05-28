@@ -1,15 +1,19 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App\DTO;
 
+use App\Util\DimensionUtil;
+
 class ProductInput
 {
+
     public function __construct(
         private readonly float $width,
         private readonly float $height,
         private readonly float $length,
-        private readonly float $weight
-    ) {
+        private readonly float $weight,
+    )
+    {
     }
 
     public function getWidth(): float
@@ -33,26 +37,11 @@ class ProductInput
     }
 
     /**
-     * @return list<float>
+     * @return array{float, float, float}
      */
     public function getNormalizedDimensions(): array
     {
-        $dimensions = [$this->width, $this->height, $this->length];
-        sort($dimensions, SORT_NUMERIC);
-
-        return $dimensions;
+        return DimensionUtil::sort($this->width, $this->height, $this->length);
     }
 
-    /**
-     * @return array{width: float, height: float, length: float, weight: float}
-     */
-    public function toArray(): array
-    {
-        return [
-            'width' => $this->width,
-            'height' => $this->height,
-            'length' => $this->length,
-            'weight' => $this->weight,
-        ];
-    }
 }

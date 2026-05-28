@@ -1,0 +1,38 @@
+includes:
+    - phar://phpstan.phar/conf/config.levelmax.neon
+    - phar://phpstan.phar/conf/bleedingEdge.neon
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+    - vendor/phpstan/phpstan-doctrine/extension.neon
+    - vendor/shipmonk/phpstan-rules/rules.neon
+    - vendor/shipmonk/dead-code-detector/rules.neon
+
+parameters:
+    paths:
+        - run.php
+        - src
+        - tests
+
+    checkImplicitMixed: true
+    checkBenevolentUnionTypes: true
+    checkUninitializedProperties: true
+    checkMissingCallableSignature: true
+    checkTooWideReturnTypesInProtectedAndPublicMethods: true
+    reportAnyTypeWideningInVarTag: true
+    reportPossiblyNonexistentConstantArrayOffset: true
+    reportPossiblyNonexistentGeneralArrayOffset: true
+
+    shipmonkRules:
+        classSuffixNaming:
+            enabled: false
+
+    shipmonkDeadCode:
+        detect:
+            deadMethods: true
+            deadConstants: true
+            deadEnumCases: true
+            deadProperties:
+                neverRead: true
+                neverWritten: true
+
+    excludePaths:
+        - vendor

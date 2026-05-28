@@ -1,19 +1,30 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App\Service;
 
 use App\DTO\ProductInput;
 use App\Entity\Packaging;
 use App\Exception\BinPackingApiResponseException;
+use function count;
+use function ctype_digit;
+use function is_array;
+use function is_string;
+use function str_starts_with;
+use function substr;
 
 final class BinPackingResponseSelector
 {
+
     /**
      * @param list<ProductInput> $products
      * @param list<Packaging> $boxes
      * @param array<string, mixed> $payload
      */
-    public function findSmallestBox(array $products, array $boxes, array $payload): ?int
+    public function findSmallestBox(
+        array $products,
+        array $boxes,
+        array $payload,
+    ): ?int
     {
         $packedContainers = $payload['packedContainers'] ?? null;
         if (!is_array($packedContainers)) {
@@ -31,7 +42,13 @@ final class BinPackingResponseSelector
 
             $containerId = $packedContainer['containerId'] ?? null;
             $items = $packedContainer['items'] ?? null;
-            if (!is_string($containerId) || !is_array($items) || count($items) !== $targetItemsCount) {
+            if (!is_string($containerId)) {
+                continue;
+            }
+            if (!is_array($items)) {
+                continue;
+            }
+            if (count($items) !== $targetItemsCount) {
                 continue;
             }
 
@@ -71,7 +88,10 @@ final class BinPackingResponseSelector
     /**
      * @param list<Packaging> $boxes
      */
-    private function findPackagingById(array $boxes, int $id): ?Packaging
+    private function findPackagingById(
+        array $boxes,
+        int $id,
+    ): ?Packaging
     {
         foreach ($boxes as $box) {
             if ($box->getId() === $id) {
@@ -81,4 +101,5 @@ final class BinPackingResponseSelector
 
         return null;
     }
+
 }

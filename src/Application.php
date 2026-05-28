@@ -1,27 +1,31 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App;
 
+use App\Entity\Packaging;
 use App\Exception\BadRequestException;
 use App\Exception\BinPackingApiException;
 use App\Exception\ValidationException;
 use App\Infrastructure\ErrorLogger;
 use App\Service\PackingService;
 use App\Validator\PackingRequestValidator;
-use Doctrine\DBAL\Exception as DbalException;
 use GuzzleHttp\Psr7\Response;
 use JsonException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Throwable;
+use function json_encode;
+use const JSON_THROW_ON_ERROR;
 
 class Application
 {
+
     public function __construct(
         private readonly PackingRequestValidator $validator,
         private readonly PackingService $packingService,
-        private readonly ErrorLogger $errorLogger
-    ) {
+        private readonly ErrorLogger $errorLogger,
+    )
+    {
     }
 
     public function run(RequestInterface $request): ResponseInterface
@@ -31,13 +35,13 @@ class Application
             $box = $this->packingService->findSmallestBox($products);
 
             $payload = [
-                'box' => $box === null ? null : [
+                'box' => $box instanceof Packaging ? [
                     'id' => $box->getId(),
                     'width' => $box->getWidth(),
                     'height' => $box->getHeight(),
                     'length' => $box->getLength(),
                     'maxWeight' => $box->getMaxWeight(),
-                ],
+                ] : null,
             ];
 
             return $this->jsonResponse(200, $payload);
@@ -61,13 +65,6 @@ class Application
                 'error' => 'packing_service_unavailable',
                 'message' => 'External packing service could not process the request.',
             ]);
-        } catch (DbalException $exception) {
-            $this->errorLogger->log($exception);
-
-            return $this->jsonResponse(500, [
-                'error' => 'internal_error',
-                'message' => 'An unexpected error occurred.',
-            ]);
         } catch (Throwable $exception) {
             $this->errorLogger->log($exception);
 
@@ -81,15 +78,20 @@ class Application
     /**
      * @param array<string, mixed> $payload
      */
-    private function jsonResponse(int $status, array $payload): ResponseInterface
+    private function jsonResponse(
+        int $status,
+        array $payload,
+    ): ResponseInterface
     {
         try {
             $json = json_encode($payload, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
+        } catch (JsonException $jsonException) {
+            $this->errorLogger->log($jsonException);
             $json = '{"error":"internal_error","message":"An unexpected error occurred."}';
             $status = 500;
         }
 
         return new Response($status, ['Content-Type' => 'application/json'], $json);
     }
+
 }

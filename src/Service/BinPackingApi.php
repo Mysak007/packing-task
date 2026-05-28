@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App\Service;
 
@@ -8,11 +8,15 @@ namespace App\Service;
  */
 interface BinPackingApi
 {
+
     /**
      * @param list<array<string, mixed>> $containers
      * @param list<array<string, mixed>> $items
-     *
      * @return array<string, mixed> decoded API response body
      */
-    public function pack(array $containers, array $items): array;
+    public function pack(
+        array $containers,
+        array $items,
+    ): array;
+
 }

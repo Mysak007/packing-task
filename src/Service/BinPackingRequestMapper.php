@@ -1,34 +1,41 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App\Service;
 
 use App\DTO\ProductInput;
 use App\Entity\Packaging;
+use LogicException;
+use function array_map;
+use function max;
+use function round;
 
 final class BinPackingRequestMapper
 {
-    private const SCALE = 1000;
+
+    private const int SCALE = 1000;
 
     /**
      * @param list<ProductInput> $products
      * @param list<Packaging> $boxes
-     *
      * @return array{
      *     containers: list<array<string, mixed>>,
      *     items: list<array<string, mixed>>
      * }
      */
-    public function map(array $products, array $boxes): array
+    public function map(
+        array $products,
+        array $boxes,
+    ): array
     {
         $containers = array_map(
             fn (Packaging $box): array => [
-                'id' => $this->boxIdToExternalContainerId($box->getId()),
+                'id' => $this->boxIdToExternalContainerId($this->requireBoxId($box)),
                 'width' => $this->toApiInt($box->getWidth()),
                 'length' => $this->toApiInt($box->getLength()),
                 'depth' => $this->toApiInt($box->getHeight()),
                 'maxWeight' => $this->toApiInt($box->getMaxWeight()),
             ],
-            $boxes
+            $boxes,
         );
 
         $items = [];
@@ -53,8 +60,19 @@ final class BinPackingRequestMapper
         return max(1, (int) round($value * self::SCALE));
     }
 
-    private function boxIdToExternalContainerId(?int $id): string
+    private function requireBoxId(Packaging $box): int
     {
-        return 'box-' . (string) $id;
+        $id = $box->getId();
+        if ($id === null) {
+            throw new LogicException('Warehouse box must have a persisted ID.');
+        }
+
+        return $id;
     }
+
+    private function boxIdToExternalContainerId(int $id): string
+    {
+        return 'box-' . $id;
+    }
+
 }

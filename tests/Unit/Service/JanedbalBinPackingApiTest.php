@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Tests\Unit\Service;
 
@@ -18,6 +18,7 @@ use PHPUnit\Framework\TestCase;
 
 class JanedbalBinPackingApiTest extends TestCase
 {
+
     public function testPackReturnsDecodedPayload(): void
     {
         $mock = new MockHandler([
@@ -27,7 +28,7 @@ class JanedbalBinPackingApiTest extends TestCase
 
         $payload = $api->pack(
             [['id' => 'box-1', 'width' => 1, 'length' => 1, 'depth' => 1, 'maxWeight' => 1]],
-            [['id' => 'item-0', 'width' => 1, 'length' => 1, 'depth' => 1, 'weight' => 1]]
+            [['id' => 'item-0', 'width' => 1, 'length' => 1, 'depth' => 1, 'weight' => 1]],
         );
 
         self::assertArrayHasKey('packedContainers', $payload);
@@ -87,4 +88,5 @@ class JanedbalBinPackingApiTest extends TestCase
         $this->expectException(BinPackingApiTransportException::class);
         $api->pack([], []);
     }
+
 }

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App\Service;
 
@@ -10,22 +10,28 @@ use App\Entity\Packaging;
  */
 class BinPackingApiClient
 {
+
     public function __construct(
         private readonly BinPackingApi $binPackingApi,
         private readonly BinPackingRequestMapper $requestMapper,
-        private readonly BinPackingResponseSelector $responseSelector
-    ) {
+        private readonly BinPackingResponseSelector $responseSelector,
+    )
+    {
     }
 
     /**
      * @param list<ProductInput> $products
      * @param list<Packaging> $boxes
      */
-    public function findSmallestBox(array $products, array $boxes): ?int
+    public function findSmallestBox(
+        array $products,
+        array $boxes,
+    ): ?int
     {
         $request = $this->requestMapper->map($products, $boxes);
         $payload = $this->binPackingApi->pack($request['containers'], $request['items']);
 
         return $this->responseSelector->findSmallestBox($products, $boxes, $payload);
     }
+
 }

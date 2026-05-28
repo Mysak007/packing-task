@@ -141,8 +141,23 @@ podman compose run --rm shipmonk-packing-app bash -lc "php -r '\$payload = file_
 Run unit tests:
 
 ```bash
-vendor/bin/phpunit
+composer test
 ```
+
+## Static analysis and code style
+
+Dev dependencies include PHPStan (max level + ShipMonk rules + dead-code detector), Rector, and ShipMonk Coding Standard (PHPCS).
+
+| Command | What it does |
+|---|---|
+| `composer check` | PHPStan + PHPCS + PHPUnit |
+| `composer phpstan` | Static analysis only |
+| `composer phpcs` | Coding standard check |
+| `composer fix:cs` | Auto-fix PHPCS issues (`phpcbf`) |
+| `composer rector` | Apply Rector refactors |
+| `composer rector:dry-run` | Preview Rector changes |
+
+Config: `phpstan.neon.dist`, `phpcs.xml.dist`, `rector.php`.
 
 ## Adminer
 

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Tests\Unit\Service;
 
@@ -7,6 +7,7 @@ use App\Entity\Packaging;
 use App\Entity\PackingCache;
 use App\Exception\BinPackingApiClientException;
 use App\Exception\BinPackingApiTransportException;
+use App\Infrastructure\ErrorLogger;
 use App\Repository\PackagingRepository;
 use App\Repository\PackingCacheRepository;
 use App\Service\BinPackingApiClient;
@@ -17,25 +18,34 @@ use ReflectionProperty;
 
 class PackingServiceTest extends TestCase
 {
+
     public function testReturnsCachedBoxWithoutApiCall(): void
     {
         $box = $this->packaging(2, 4, 4, 4, 20);
         $cache = new PackingCache('hash', 2);
 
-        $packagingRepo = $this->createMock(PackagingRepository::class);
+        $packagingRepo = self::createStub(PackagingRepository::class);
         $packagingRepo->method('findAll')->willReturn([$box]);
-        $packagingRepo->method('findById')->with(2)->willReturn($box);
+        $packagingRepo->method('findById')->willReturnCallback(
+            static fn (int $id): ?Packaging => $id === 2 ? $box : null,
+        );
 
-        $cacheRepo = $this->createMock(PackingCacheRepository::class);
+        $cacheRepo = self::createStub(PackingCacheRepository::class);
         $cacheRepo->method('findForInput')->willReturn($cache);
 
-        $apiClient = $this->createMock(BinPackingApiClient::class);
+        $apiClient = self::createMock(BinPackingApiClient::class);
         $apiClient->expects(self::never())->method('findSmallestBox');
 
-        $fallback = $this->createMock(FallbackPackingCalculator::class);
+        $fallback = self::createMock(FallbackPackingCalculator::class);
         $fallback->expects(self::never())->method('findSmallestBox');
 
-        $service = new PackingService($packagingRepo, $cacheRepo, $apiClient, $fallback);
+        $service = new PackingService(
+            $packagingRepo,
+            $cacheRepo,
+            $apiClient,
+            $fallback,
+            new ErrorLogger(),
+        );
         $result = $service->findSmallestBox([new ProductInput(1, 1, 1, 1)]);
 
         self::assertSame(2, $result?->getId());
@@ -45,23 +55,23 @@ class PackingServiceTest extends TestCase
     {
         $box = $this->packaging(1, 4, 4, 4, 20);
 
-        $packagingRepo = $this->createMock(PackagingRepository::class);
+        $packagingRepo = self::createStub(PackagingRepository::class);
         $packagingRepo->method('findAll')->willReturn([$box]);
         $packagingRepo->method('findById')->willReturn($box);
 
-        $cacheRepo = $this->createMock(PackingCacheRepository::class);
+        $cacheRepo = self::createMock(PackingCacheRepository::class);
         $cacheRepo->method('findForInput')->willReturn(null);
         $cacheRepo->expects(self::never())->method('saveForInput');
 
-        $apiClient = $this->createMock(BinPackingApiClient::class);
+        $apiClient = self::createStub(BinPackingApiClient::class);
         $apiClient->method('findSmallestBox')->willThrowException(
-            new BinPackingApiTransportException('timeout')
+            new BinPackingApiTransportException('timeout'),
         );
 
-        $fallback = $this->createMock(FallbackPackingCalculator::class);
+        $fallback = self::createStub(FallbackPackingCalculator::class);
         $fallback->method('findSmallestBox')->willReturn(1);
 
-        $service = new PackingService($packagingRepo, $cacheRepo, $apiClient, $fallback);
+        $service = new PackingService($packagingRepo, $cacheRepo, $apiClient, $fallback, new ErrorLogger());
         $result = $service->findSmallestBox([new ProductInput(1, 1, 1, 1)]);
 
         self::assertSame(1, $result?->getId());
@@ -71,27 +81,39 @@ class PackingServiceTest extends TestCase
     {
         $box = $this->packaging(1, 4, 4, 4, 20);
 
-        $packagingRepo = $this->createMock(PackagingRepository::class);
+        $packagingRepo = self::createStub(PackagingRepository::class);
         $packagingRepo->method('findAll')->willReturn([$box]);
 
-        $cacheRepo = $this->createMock(PackingCacheRepository::class);
-        $cacheRepo->method('findByInputHash')->willReturn(null);
+        $cacheRepo = self::createStub(PackingCacheRepository::class);
+        $cacheRepo->method('findForInput')->willReturn(null);
 
-        $apiClient = $this->createMock(BinPackingApiClient::class);
+        $apiClient = self::createStub(BinPackingApiClient::class);
         $apiClient->method('findSmallestBox')->willThrowException(
-            new BinPackingApiClientException(422)
+            new BinPackingApiClientException(422),
         );
 
-        $fallback = $this->createMock(FallbackPackingCalculator::class);
+        $fallback = self::createMock(FallbackPackingCalculator::class);
         $fallback->expects(self::never())->method('findSmallestBox');
 
-        $service = new PackingService($packagingRepo, $cacheRepo, $apiClient, $fallback);
+        $service = new PackingService(
+            $packagingRepo,
+            $cacheRepo,
+            $apiClient,
+            $fallback,
+            new ErrorLogger(),
+        );
 
         $this->expectException(BinPackingApiClientException::class);
         $service->findSmallestBox([new ProductInput(1, 1, 1, 1)]);
     }
 
-    private function packaging(int $id, float $w, float $h, float $l, float $maxWeight): Packaging
+    private function packaging(
+        int $id,
+        float $w,
+        float $h,
+        float $l,
+        float $maxWeight,
+    ): Packaging
     {
         $packaging = new Packaging($w, $h, $l, $maxWeight);
         $idProperty = new ReflectionProperty(Packaging::class, 'id');
@@ -99,4 +121,5 @@ class PackingServiceTest extends TestCase
 
         return $packaging;
     }
+
 }

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App;
 
@@ -18,13 +18,14 @@ use GuzzleHttp\Client;
 
 final class ApplicationFactory
 {
+
     public static function create(EntityManager $entityManager): Application
     {
         $errorLogger = new ErrorLogger();
         $packagingRepository = new PackagingRepository($entityManager);
         $cacheRepository = new PackingCacheRepository(
             $entityManager,
-            new PackingCacheKeyGenerator()
+            new PackingCacheKeyGenerator(),
         );
         $httpClient = new Client([
             'timeout' => 2.0,
@@ -34,20 +35,22 @@ final class ApplicationFactory
         $apiClient = new BinPackingApiClient(
             new JanedbalBinPackingApi($httpClient),
             new BinPackingRequestMapper(),
-            new BinPackingResponseSelector()
+            new BinPackingResponseSelector(),
         );
         $fallbackCalculator = new FallbackPackingCalculator();
         $packingService = new PackingService(
             $packagingRepository,
             $cacheRepository,
             $apiClient,
-            $fallbackCalculator
+            $fallbackCalculator,
+            $errorLogger,
         );
 
         return new Application(
             new PackingRequestValidator(),
             $packingService,
-            $errorLogger
+            $errorLogger,
         );
     }
+
 }

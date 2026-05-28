@@ -1,21 +1,26 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App\Service;
 
 use App\DTO\ProductInput;
 use App\Entity\Packaging;
+use App\Entity\PackingCache;
 use App\Exception\RecoverablePackingException;
+use App\Infrastructure\ErrorLogger;
 use App\Repository\PackagingRepository;
 use App\Repository\PackingCacheRepository;
 
 class PackingService
 {
+
     public function __construct(
         private readonly PackagingRepository $packagingRepository,
         private readonly PackingCacheRepository $cacheRepository,
         private readonly BinPackingApiClient $apiClient,
-        private readonly FallbackPackingCalculator $fallbackCalculator
-    ) {
+        private readonly FallbackPackingCalculator $fallbackCalculator,
+        private readonly ErrorLogger $errorLogger,
+    )
+    {
     }
 
     /**
@@ -29,7 +34,7 @@ class PackingService
         }
 
         $cached = $this->cacheRepository->findForInput($products, $boxes);
-        if ($cached !== null) {
+        if ($cached instanceof PackingCache) {
             return $this->resolvePackaging($cached->getPackagingId());
         }
 
@@ -38,9 +43,10 @@ class PackingService
             $this->cacheRepository->saveForInput($products, $boxes, $packagingId);
 
             return $this->resolvePackaging($packagingId);
-        } catch (RecoverablePackingException) {
+        } catch (RecoverablePackingException $recoverablePackingException) {
+            $this->errorLogger->log($recoverablePackingException, ['fallback' => true]);
             return $this->resolvePackaging(
-                $this->fallbackCalculator->findSmallestBox($products, $boxes)
+                $this->fallbackCalculator->findSmallestBox($products, $boxes),
             );
         }
     }
@@ -53,4 +59,5 @@ class PackingService
 
         return $this->packagingRepository->findById($packagingId);
     }
+
 }

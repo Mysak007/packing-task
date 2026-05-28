@@ -1,12 +1,14 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App\Repository;
 
 use App\Entity\Packaging;
 use Doctrine\ORM\EntityManager;
+use function usort;
 
 class PackagingRepository
 {
+
     public function __construct(private readonly EntityManager $entityManager)
     {
     }
@@ -21,7 +23,7 @@ class PackagingRepository
 
         usort(
             $packaging,
-            static fn (Packaging $left, Packaging $right): int => $left->getVolume() <=> $right->getVolume()
+            static fn (Packaging $left, Packaging $right): int => $left->getVolume() <=> $right->getVolume(),
         );
 
         return $packaging;
@@ -29,12 +31,7 @@ class PackagingRepository
 
     public function findById(int $id): ?Packaging
     {
-        $packaging = $this->entityManager->getRepository(Packaging::class)->find($id);
-
-        if (!$packaging instanceof Packaging) {
-            return null;
-        }
-
-        return $packaging;
+        return $this->entityManager->getRepository(Packaging::class)->find($id);
     }
+
 }

@@ -1,9 +1,13 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App\Entity;
 
 use Doctrine\DBAL\Types\Types;
-use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Column;
+use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\GeneratedValue;
+use Doctrine\ORM\Mapping\Id;
+use Doctrine\ORM\Mapping\Table;
 
 /**
  * Warehouse shipping box (carton) available for packing orders.
@@ -11,34 +15,27 @@ use Doctrine\ORM\Mapping as ORM;
  * Named {@see Packaging} for compatibility with the project stub and DB table `packaging`.
  * In domain language and the public API this is a "box", not a package/shipment.
  */
-#[ORM\Entity]
-#[ORM\Table(name: 'packaging')]
+#[Entity]
+#[Table(name: 'packaging')]
 class Packaging
 {
 
-    #[ORM\Id]
-    #[ORM\Column(type: Types::INTEGER)]
-    #[ORM\GeneratedValue]
+    #[Id]
+    #[Column(type: Types::INTEGER)]
+    #[GeneratedValue]
     private ?int $id = null;
 
-    #[ORM\Column(type: Types::FLOAT)]
-    private float $width;
-
-    #[ORM\Column(type: Types::FLOAT)]
-    private float $height;
-
-    #[ORM\Column(type: Types::FLOAT)]
-    private float $length;
-
-    #[ORM\Column(type: Types::FLOAT)]
-    private float $maxWeight;
-
-    public function __construct(float $width, float $height, float $length, float $maxWeight)
+    public function __construct(
+        #[Column(type: Types::FLOAT)]
+        private float $width,
+        #[Column(type: Types::FLOAT)]
+        private float $height,
+        #[Column(type: Types::FLOAT)]
+        private float $length,
+        #[Column(type: Types::FLOAT)]
+        private float $maxWeight,
+    )
     {
-        $this->width = $width;
-        $this->height = $height;
-        $this->length = $length;
-        $this->maxWeight = $maxWeight;
     }
 
     public function getId(): ?int

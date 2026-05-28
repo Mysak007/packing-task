@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace Tests\Unit\Service;
 
@@ -11,6 +11,7 @@ use ReflectionProperty;
 
 class BinPackingResponseSelectorTest extends TestCase
 {
+
     public function testSelectsSmallestBoxThatFitsAllItems(): void
     {
         $selector = new BinPackingResponseSelector();
@@ -38,7 +39,13 @@ class BinPackingResponseSelectorTest extends TestCase
         $selector->findSmallestBox([], [], []);
     }
 
-    private function packaging(int $id, float $w, float $h, float $l, float $maxWeight): Packaging
+    private function packaging(
+        int $id,
+        float $w,
+        float $h,
+        float $l,
+        float $maxWeight,
+    ): Packaging
     {
         $packaging = new Packaging($w, $h, $l, $maxWeight);
         $idProperty = new ReflectionProperty(Packaging::class, 'id');
@@ -46,4 +53,5 @@ class BinPackingResponseSelectorTest extends TestCase
 
         return $packaging;
     }
+
 }

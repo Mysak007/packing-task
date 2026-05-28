@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App\Validator;
 
@@ -7,9 +7,16 @@ use App\Exception\BadRequestException;
 use App\Exception\ValidationException;
 use JsonException;
 use Psr\Http\Message\RequestInterface;
+use function array_values;
+use function is_array;
+use function is_float;
+use function is_int;
+use function json_decode;
+use const JSON_THROW_ON_ERROR;
 
 class PackingRequestValidator
 {
+
     /**
      * @return list<ProductInput>
      */
@@ -39,7 +46,7 @@ class PackingRequestValidator
 
         $violations = [];
         $parsedProducts = [];
-        foreach ($products as $index => $product) {
+        foreach (array_values($products) as $index => $product) {
             if (!is_array($product)) {
                 $violations[] = [
                     'path' => '/products/' . $index,
@@ -48,10 +55,13 @@ class PackingRequestValidator
                 continue;
             }
 
-            $width = $this->validatePositiveNumber($product, 'width', $index, $violations);
-            $height = $this->validatePositiveNumber($product, 'height', $index, $violations);
-            $length = $this->validatePositiveNumber($product, 'length', $index, $violations);
-            $weight = $this->validatePositiveNumber($product, 'weight', $index, $violations);
+            /** @var array<string, mixed> $productData */
+            $productData = $product;
+
+            $width = $this->validatePositiveNumber($productData, 'width', $index, $violations);
+            $height = $this->validatePositiveNumber($productData, 'height', $index, $violations);
+            $length = $this->validatePositiveNumber($productData, 'length', $index, $violations);
+            $weight = $this->validatePositiveNumber($productData, 'weight', $index, $violations);
 
             if ($width !== null && $height !== null && $length !== null && $weight !== null) {
                 $parsedProducts[] = new ProductInput($width, $height, $length, $weight);
@@ -69,7 +79,12 @@ class PackingRequestValidator
      * @param array<string, mixed> $product
      * @param list<array{path: string, message: string}> $violations
      */
-    private function validatePositiveNumber(array $product, string $field, int $index, array &$violations): ?float
+    private function validatePositiveNumber(
+        array $product,
+        string $field,
+        int $index,
+        array &$violations,
+    ): ?float
     {
         $value = $product[$field] ?? null;
         if (!is_int($value) && !is_float($value)) {
@@ -92,4 +107,5 @@ class PackingRequestValidator
 
         return (float) $value;
     }
+
 }

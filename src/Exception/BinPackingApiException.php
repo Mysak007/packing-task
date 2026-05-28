@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace App\Exception;
 
@@ -7,11 +7,13 @@ use Throwable;
 
 abstract class BinPackingApiException extends RuntimeException
 {
+
     public function __construct(
         string $message,
         private readonly ?int $statusCode = null,
-        ?Throwable $previous = null
-    ) {
+        ?Throwable $previous = null,
+    )
+    {
         parent::__construct($message, 0, $previous);
     }
 
@@ -19,4 +21,5 @@ abstract class BinPackingApiException extends RuntimeException
     {
         return $this->statusCode;
     }
+
 }
