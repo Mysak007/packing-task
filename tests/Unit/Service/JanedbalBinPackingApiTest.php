@@ -19,12 +19,14 @@ use PHPUnit\Framework\TestCase;
 class JanedbalBinPackingApiTest extends TestCase
 {
 
+    private const string BASE_URL = 'https://binpacking.janedbal.cz';
+
     public function testPackReturnsDecodedPayload(): void
     {
         $mock = new MockHandler([
             new Response(200, [], '{"packedContainers":[],"unpackedItems":[]}'),
         ]);
-        $api = new JanedbalBinPackingApi(new Client(['handler' => HandlerStack::create($mock)]));
+        $api = new JanedbalBinPackingApi(new Client(['handler' => HandlerStack::create($mock)]), self::BASE_URL);
 
         $payload = $api->pack(
             [['id' => 'box-1', 'width' => 1, 'length' => 1, 'depth' => 1, 'maxWeight' => 1]],
@@ -39,7 +41,7 @@ class JanedbalBinPackingApiTest extends TestCase
         $mock = new MockHandler([
             new Response(429, [], '{"error":"rate_limit_exceeded"}'),
         ]);
-        $api = new JanedbalBinPackingApi(new Client(['handler' => HandlerStack::create($mock)]));
+        $api = new JanedbalBinPackingApi(new Client(['handler' => HandlerStack::create($mock)]), self::BASE_URL);
 
         $this->expectException(BinPackingApiRateLimitedException::class);
         $api->pack([], []);
@@ -50,7 +52,7 @@ class JanedbalBinPackingApiTest extends TestCase
         $mock = new MockHandler([
             new Response(503, [], '{"error":"internal_error"}'),
         ]);
-        $api = new JanedbalBinPackingApi(new Client(['handler' => HandlerStack::create($mock)]));
+        $api = new JanedbalBinPackingApi(new Client(['handler' => HandlerStack::create($mock)]), self::BASE_URL);
 
         $this->expectException(BinPackingApiServerException::class);
         $api->pack([], []);
@@ -61,7 +63,7 @@ class JanedbalBinPackingApiTest extends TestCase
         $mock = new MockHandler([
             new Response(422, [], '{"error":"validation_failed"}'),
         ]);
-        $api = new JanedbalBinPackingApi(new Client(['handler' => HandlerStack::create($mock)]));
+        $api = new JanedbalBinPackingApi(new Client(['handler' => HandlerStack::create($mock)]), self::BASE_URL);
 
         $this->expectException(BinPackingApiClientException::class);
         $api->pack([], []);
@@ -72,7 +74,7 @@ class JanedbalBinPackingApiTest extends TestCase
         $mock = new MockHandler([
             new Response(200, [], 'not-json'),
         ]);
-        $api = new JanedbalBinPackingApi(new Client(['handler' => HandlerStack::create($mock)]));
+        $api = new JanedbalBinPackingApi(new Client(['handler' => HandlerStack::create($mock)]), self::BASE_URL);
 
         $this->expectException(BinPackingApiResponseException::class);
         $api->pack([], []);
@@ -83,7 +85,7 @@ class JanedbalBinPackingApiTest extends TestCase
         $mock = new MockHandler([
             new ConnectException('Connection refused', new Request('POST', 'test')),
         ]);
-        $api = new JanedbalBinPackingApi(new Client(['handler' => HandlerStack::create($mock)]));
+        $api = new JanedbalBinPackingApi(new Client(['handler' => HandlerStack::create($mock)]), self::BASE_URL);
 
         $this->expectException(BinPackingApiTransportException::class);
         $api->pack([], []);

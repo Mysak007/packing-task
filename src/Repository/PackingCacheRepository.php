@@ -57,12 +57,11 @@ class PackingCacheRepository
     {
         $cache = $this->findByInputHash($inputHash);
         if ($cache instanceof PackingCache) {
-            $cache->setPackagingId($packagingId);
-        } else {
-            $cache = new PackingCache($inputHash, $packagingId);
-            $this->entityManager->persist($cache);
+            return;
         }
 
+        $cache = new PackingCache($inputHash, $packagingId);
+        $this->entityManager->persist($cache);
         $this->entityManager->flush();
     }
 

@@ -14,23 +14,10 @@ final class DimensionUtil
         float $length,
     ): array
     {
-        $first = $width;
-        $second = $height;
-        $third = $length;
+        $dimensions = [$width, $height, $length];
+        sort($dimensions);
 
-        if ($first > $second) {
-            [$first, $second] = [$second, $first];
-        }
-
-        if ($second > $third) {
-            [$second, $third] = [$third, $second];
-        }
-
-        if ($first > $second) {
-            [$first, $second] = [$second, $first];
-        }
-
-        return [$first, $second, $third];
+        return [$dimensions[0], $dimensions[1], $dimensions[2]];
     }
 
 }

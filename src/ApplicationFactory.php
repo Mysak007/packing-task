@@ -33,7 +33,7 @@ final class ApplicationFactory
             'http_errors' => false,
         ]);
         $apiClient = new BinPackingApiClient(
-            new JanedbalBinPackingApi($httpClient),
+            new JanedbalBinPackingApi($httpClient, 'https://binpacking.janedbal.cz'),
             new BinPackingRequestMapper(),
             new BinPackingResponseSelector(),
         );

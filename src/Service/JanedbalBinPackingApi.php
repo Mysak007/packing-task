@@ -20,9 +20,12 @@ use const JSON_THROW_ON_ERROR;
 final readonly class JanedbalBinPackingApi implements BinPackingApi
 {
 
-    private const string ENDPOINT = 'https://binpacking.janedbal.cz/api/v1/pack';
+    private const string PACK_PATH = '/api/v1/pack';
 
-    public function __construct(private ClientInterface $httpClient)
+    public function __construct(
+        private ClientInterface $httpClient,
+        private string $baseUrl,
+    )
     {
     }
 
@@ -37,7 +40,7 @@ final readonly class JanedbalBinPackingApi implements BinPackingApi
     ): array
     {
         try {
-            $response = $this->httpClient->request('POST', self::ENDPOINT, [
+            $response = $this->httpClient->request('POST', rtrim($this->baseUrl, '/') . self::PACK_PATH, [
                 'json' => [
                     'containers' => $containers,
                     'items' => $items,
